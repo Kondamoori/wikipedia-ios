@@ -1951,6 +1951,65 @@ class PlacesViewController: ViewController, UISearchBarDelegate, ArticlePopoverV
         currentSearch = PlaceSearch(filter: .top, type: .location, origin: .user, sortStyle: .links, string: nil, region: region, localizedDescription: title, searchResult: searchResult, siteURL: articleURL.wmf_site)
     }
     
+    @objc public func showArticleFromLocation(_ name: String) {
+        let text = name.trimmingCharacters(in: NSCharacterSet.whitespacesAndNewlines)
+        guard text != "" else { return }
+        
+        let siteURL = self.siteURL
+        searchFetcher.fetchArticles(forSearchTerm: text, siteURL: siteURL, resultLimit: 24, failure: { (error) in
+            return
+        }) { (searchResult) in
+            DispatchQueue.main.async {
+                let center = self.mapView.userLocation.coordinate
+                let region = CLCircularRegion(center: center, radius: 40075000, identifier: "world")
+                self.locationSearchFetcher.fetchArticles(withSiteURL: self.siteURL, in: region, matchingSearchTerm: text, sortStyle: .links, resultLimit: 24, completion: { (locationSearchResults) in
+                    DispatchQueue.main.async {
+                        var combinedResults: [MWKSearchResult] = searchResult.results ?? []
+                        let newResults = locationSearchResults.results as [MWKSearchResult]
+                        combinedResults.append(contentsOf: newResults)
+                        let result = self.handleCompletion(searchResults: combinedResults, siteURL: siteURL)
+                        self.currentSearch = result.first
+                    }
+                }) { (error) in }
+            }
+        }
+    }
+    
+    @objc public func showArticleFromLocation(longitude: String, latitude: String) {
+        guard let latitude = Double(latitude), let longitude = Double(longitude) else { return }
+            let location = CLLocation(latitude: latitude, longitude: longitude)
+            
+            self.locationSearchFetcher.fetchArticles(withSiteURL: self.siteURL, location: location, resultLimit: 24, completion: { (locationSearchResults) in
+                DispatchQueue.main.async {
+                    let newResults = locationSearchResults.results as [MWKSearchResult]
+                    let result = self.handleCompletion(searchResults: newResults, siteURL: self.siteURL)
+                    self.currentSearch = result.first
+                }
+                
+            }, failure: {(error) in
+                print("error is \(error)")
+            })
+        }
+    
+    private func showR(with location: String) {
+        let coordinates = location.components(separatedBy: ",")
+        
+        guard let lattitude = Double(coordinates.first ?? "0.0"), let longitude = Double(coordinates.last ?? "0.0") else { return }
+        let location = CLLocation(latitude: lattitude, longitude: longitude)
+        
+        self.locationSearchFetcher.fetchArticles(withSiteURL: self.siteURL, location: location, resultLimit: 24, completion: { (locationSearchResults) in
+            DispatchQueue.main.async {
+                let newResults = locationSearchResults.results as [MWKSearchResult]
+                let result = self.handleCompletion(searchResults: newResults, siteURL: self.siteURL)
+                self.currentSearch = result.first
+            }
+            
+        }, failure: {(error) in
+            print("error is \(error)")
+        })
+        
+    }
+    
     fileprivate func searchForFirstSearchSuggestion() {
         if !searchSuggestionController.searches[PlaceSearchSuggestionController.completionSection].isEmpty {
             currentSearch = searchSuggestionController.searches[PlaceSearchSuggestionController.completionSection][0]

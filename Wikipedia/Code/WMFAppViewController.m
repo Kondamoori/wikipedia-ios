@@ -49,6 +49,10 @@ static const NSString *kvo_NSUserDefaults_defaultTabType = @"kvo_NSUserDefaults_
 static const NSString *kvo_SavedArticlesFetcher_progress = @"kvo_SavedArticlesFetcher_progress";
 
 NSString *const WMFLanguageVariantAlertsLibraryVersion = @"WMFLanguageVariantAlertsLibraryVersion";
+NSString *const WMFDeepLinkQueryParamName = @"WMFDeepLinkQueryParamName";
+NSString *const WMFDeepLinkQueryParamLongitude = @"WMFDeepLinkQueryParamLongitude";
+NSString *const WMFDeepLinkQueryParamLatitude = @"WMFDeepLinkQueryParamLatitude";
+
 
 @interface WMFAppViewController () <UITabBarControllerDelegate, UINavigationControllerDelegate, UIGestureRecognizerDelegate, WMFThemeable, WMFWorkerControllerDelegate, WMFThemeableNavigationControllerDelegate, WMFAppTabBarDelegate>
 
@@ -1180,6 +1184,16 @@ NSString *const WMFLanguageVariantAlertsLibraryVersion = @"WMFLanguageVariantAle
                 // For "View on a map" action to succeed, view mode has to be set to map.
                 [[self placesViewController] updateViewModeToMap];
                 [[self placesViewController] showArticleURL:articleURL];
+                // We should also check for query parameters if the url is nil
+            } else if (activity.userInfo != nil && activity.userInfo.count != 0)  {
+                NSString *name = activity.userInfo[WMFDeepLinkQueryParamName];
+                NSString *longitude = activity.userInfo[WMFDeepLinkQueryParamLongitude];
+                NSString *latitude = activity.userInfo[WMFDeepLinkQueryParamLatitude];
+                if (name != nil) {
+                    [[self placesViewController] showArticleFromLocation: name];
+                } else if (longitude != nil && latitude != nil) {
+                    [[self placesViewController] showArticleFromLocationWithLongitude:longitude latitude:latitude];
+                }
             }
         } break;
         case WMFUserActivityTypeContent: {
